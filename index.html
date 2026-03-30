@@ -2,13 +2,15 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>VoiceChat — Мессенджер с голосовыми звонками</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VoiceChat — Рабочий мессенджер с звонками</title>
+    <!-- Подключаем PeerJS с правильным URL -->
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            font-family: 'Segoe UI', system-ui, sans-serif;
             background: #0e1621;
             height: 100vh;
             display: flex;
@@ -124,7 +126,7 @@
         .call-btn {
             background: none;
             border: none;
-            font-size: 22px;
+            font-size: 24px;
             color: #6c8695;
             cursor: pointer;
             padding: 10px;
@@ -158,13 +160,13 @@
         .outgoing .bubble { background: #2c7be5; color: white; border-bottom-right-radius: 4px; }
         .incoming .bubble { background: #2b3b47; color: white; border-bottom-left-radius: 4px; }
         .message-time { font-size: 10px; color: #8e9eae; margin-top: 4px; text-align: right; }
-        .call-message {
+        .system-message {
             text-align: center;
-            padding: 8px;
-            margin: 5px 0;
+            padding: 6px 12px;
+            margin: 4px 0;
             background: #2b3b47;
             border-radius: 20px;
-            font-size: 12px;
+            font-size: 11px;
             color: #8e9eae;
         }
         .input-area {
@@ -192,7 +194,6 @@
             border-radius: 50%;
             color: white;
             cursor: pointer;
-            transition: 0.2s;
         }
         .tools {
             position: absolute;
@@ -207,7 +208,6 @@
             color: #6c8695;
             font-size: 22px;
             cursor: pointer;
-            padding: 6px;
         }
         .sticker-panel {
             background: #17212b;
@@ -221,22 +221,13 @@
             right: 25px;
             width: 260px;
             border: 1px solid #2b3b47;
+            z-index: 100;
         }
-        .sticker { font-size: 36px; cursor: pointer; transition: transform 0.1s; padding: 4px; }
+        .sticker { font-size: 36px; cursor: pointer; padding: 4px; transition: 0.1s; }
         .sticker:hover { transform: scale(1.2); background: #2b3b47; border-radius: 12px; }
         .hidden { display: none; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         .help-text { font-size: 12px; color: #8e9eae; margin-top: 12px; text-align: center; line-height: 1.5; }
-        .in-call-badge {
-            background: #e53935;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            color: white;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
     </style>
 </head>
 <body>
@@ -253,7 +244,7 @@
         <div>
             <div style="color:#8e9eae; margin-bottom: 8px;"><i class="fas fa-qrcode"></i> ВАШ ID</div>
             <div class="id-box" id="myIdDisplay">Генерация...</div>
-            <button class="btn btn-secondary" id="copyIdBtn" style="margin-top: 8px;"><i class="fas fa-copy"></i> Копировать ID</button>
+            <button class="btn btn-secondary" id="copyIdBtn"><i class="fas fa-copy"></i> Копировать ID</button>
         </div>
         
         <div>
@@ -265,10 +256,10 @@
         
         <div class="help-text">
             <i class="fas fa-phone-alt"></i> Голосовые звонки:<br>
-            • Подключитесь к другу<br>
-            • Нажмите 📞 для звонка<br>
-            • Друг принимает вызов<br>
-            • Говорите в микрофон! 🎤
+            1️⃣ Скопируйте свой ID и отправьте другу<br>
+            2️⃣ Друг вставляет ваш ID → Подключиться<br>
+            3️⃣ Нажмите 📞 для звонка<br>
+            4️⃣ Друг принимает → Говорите! 🎤
         </div>
     </div>
     
@@ -280,9 +271,8 @@
             </div>
         </div>
         <div class="messages-area" id="messagesArea">
-            <div style="text-align:center; color:#6c8695; padding:40px;">
-                <i class="fas fa-comment-dots" style="font-size: 48px; opacity: 0.5;"></i><br>
-                Скопируйте свой ID и отправьте другу
+            <div class="system-message">
+                <i class="fas fa-info-circle"></i> Ваш ID готов! Отправьте его другу.
             </div>
         </div>
         <div class="input-area">
@@ -304,7 +294,7 @@
 </div>
 
 <script>
-    // ========== МЕССЕНДЖЕР С ГОЛОСОВЫМИ ЗВОНКАМИ ==========
+    // ========== РАБОЧАЯ ВЕРСИЯ ==========
     let peer = null;
     let currentConn = null;
     let currentCall = null;
@@ -316,59 +306,82 @@
     let isInCall = false;
     
     // Генерация уникального ID
-    myId = 'user_' + Math.random().toString(36).substring(2, 12) + '_' + Date.now().toString(36);
+    myId = 'user_' + Math.random().toString(36).substring(2, 10) + '_' + Date.now().toString(36);
     document.getElementById('myIdDisplay').innerText = myId;
-    document.getElementById('currentUserName').innerText = myId.substring(0, 12);
+    document.getElementById('currentUserName').innerText = myId.substring(0, 14);
     
-    // Инициализация PeerJS с STUN серверами
+    function addSystemMessage(text) {
+        const container = document.getElementById('messagesArea');
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'system-message';
+        msgDiv.innerHTML = `<i class="fas fa-info-circle"></i> ${escapeHtml(text)}`;
+        container.appendChild(msgDiv);
+        container.scrollTop = container.scrollHeight;
+    }
+    
+    function addMessage(content, type, time, isSticker = false) {
+        const container = document.getElementById('messagesArea');
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `message ${type === 'outgoing' ? 'outgoing' : 'incoming'}`;
+        let displayContent = isSticker && content.length <= 4 ? `<div style="font-size: 42px;">${content}</div>` : escapeHtml(content);
+        msgDiv.innerHTML = `<div><div class="bubble">${displayContent}</div><div class="message-time">${time}</div></div>`;
+        container.appendChild(msgDiv);
+        container.scrollTop = container.scrollHeight;
+    }
+    
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
+    }
+    
+    // Инициализация PeerJS
     function initPeer() {
+        addSystemMessage('🔄 Подключение к серверу...');
+        
         peer = new Peer(myId, {
             config: {
                 iceServers: [
                     { urls: 'stun:stun.l.google.com:19302' },
                     { urls: 'stun:stun1.l.google.com:19302' },
-                    { urls: 'stun:stun2.l.google.com:19302' },
-                    { urls: 'stun:stun3.l.google.com:19302' },
-                    { urls: 'stun:stun4.l.google.com:19302' }
+                    { urls: 'stun:stun2.l.google.com:19302' }
                 ]
             }
         });
         
         peer.on('open', (id) => {
-            addSystemMessage('✅ Ваш ID готов! Отправьте его другу.');
+            addSystemMessage('✅ Готово! Ваш ID: ' + id);
         });
         
         peer.on('error', (err) => {
             console.error(err);
             if (err.type === 'network') {
-                addSystemMessage('⚠️ Ошибка сети. Попробуйте обновить страницу (F5)');
+                addSystemMessage('⚠️ Ошибка сети. Обновите страницу (F5)');
+            } else if (err.type === 'unavailable-id') {
+                addSystemMessage('⚠️ Ошибка ID. Обновите страницу');
+                setTimeout(() => location.reload(), 2000);
             }
         });
         
         peer.on('connection', (conn) => {
             if (currentConn) { conn.close(); return; }
             setupConnection(conn);
-            addSystemMessage(`📞 Входящее подключение!`);
+            addSystemMessage('📞 Входящее подключение!');
         });
         
         peer.on('call', (call) => {
-            if (currentCall) { 
-                call.close(); 
-                return; 
-            }
+            if (currentCall) { call.close(); return; }
             
-            const acceptCall = confirm(`📞 Входящий голосовой звонок! Принять?`);
-            if (acceptCall) {
+            if (confirm('📞 Входящий голосовой звонок! Принять?')) {
                 navigator.mediaDevices.getUserMedia({ audio: true })
                     .then(stream => {
                         localStream = stream;
                         call.answer(stream);
-                        setupVoiceCall(call);
-                        addSystemMessage('🎙️ Звонок начат. Говорите!');
+                        setupCall(call);
+                        addSystemMessage('🎙️ Звонок начат! Говорите в микрофон.');
                         updateCallUI(true);
                     })
                     .catch(() => {
-                        addSystemMessage('❌ Не удалось получить доступ к микрофону');
+                        addSystemMessage('❌ Нет доступа к микрофону. Разрешите доступ в браузере.');
                         call.close();
                     });
             } else {
@@ -389,11 +402,11 @@
         
         conn.on('data', (data) => {
             if (data.type === 'message') {
-                addMessageToChat(data.text, 'incoming', data.time);
+                addMessage(data.text, 'incoming', data.time);
             } else if (data.type === 'sticker') {
-                addMessageToChat(data.sticker, 'incoming', data.time, true);
+                addMessage(data.sticker, 'incoming', data.time, true);
             } else if (data.type === 'gift') {
-                addMessageToChat('🎁 Подарок от друга!', 'incoming', data.time);
+                addMessage('🎁 Подарок от друга! 🎁', 'incoming', data.time);
             } else if (data.type === 'call_end') {
                 endCall();
                 addSystemMessage('📞 Собеседник завершил звонок');
@@ -405,7 +418,7 @@
             addSystemMessage('🔌 Собеседник отключился');
         });
         
-        addSystemMessage('✅ Подключение установлено! Можете общаться и звонить.');
+        addSystemMessage('✅ Подключение установлено! Можно общаться и звонить.');
     }
     
     function connectToFriend() {
@@ -422,13 +435,13 @@
         });
         
         conn.on('error', () => {
-            alert('Не удалось подключиться. Проверьте ID друга и что он онлайн.');
+            alert('Не удалось подключиться. Проверьте ID и что друг онлайн.');
             addSystemMessage('❌ Ошибка подключения');
         });
         
         setTimeout(() => {
             if (!isConnected) {
-                addSystemMessage('⚠️ Не удалось подключиться. Убедитесь, что друг онлайн.');
+                addSystemMessage('⚠️ Не удалось подключиться. Убедитесь, что друг онлайн и ввёл ваш ID.');
             }
         }, 8000);
     }
@@ -452,7 +465,7 @@
             .then(stream => {
                 localStream = stream;
                 const call = peer.call(remotePeerId, stream);
-                setupVoiceCall(call);
+                setupCall(call);
                 updateCallUI(true);
             })
             .catch(() => {
@@ -462,7 +475,7 @@
             });
     }
     
-    function setupVoiceCall(call) {
+    function setupCall(call) {
         currentCall = call;
         isInCall = true;
         
@@ -472,11 +485,10 @@
             document.getElementById('connectionStatus').className = 'status connected';
             document.getElementById('connectionStatus').innerHTML = '<i class="fas fa-phone-alt"></i> В звонке 🎤';
             
-            // Создаем аудио элемент для воспроизведения звука собеседника
-            const audioElement = new Audio();
-            audioElement.srcObject = stream;
-            audioElement.autoplay = true;
-            call.audioElement = audioElement;
+            const audio = new Audio();
+            audio.srcObject = stream;
+            audio.autoplay = true;
+            call.audioElement = audio;
         });
         
         call.on('close', () => {
@@ -486,7 +498,7 @@
         
         call.on('error', () => {
             endCall();
-            addSystemMessage('❌ Ошибка соединения во время звонка');
+            addSystemMessage('❌ Ошибка во время звонка');
         });
     }
     
@@ -515,9 +527,6 @@
         if (isConnected) {
             document.getElementById('connectionStatus').className = 'status connected';
             document.getElementById('connectionStatus').innerHTML = '<i class="fas fa-link"></i> Подключен';
-        } else {
-            document.getElementById('connectionStatus').className = 'status disconnected';
-            document.getElementById('connectionStatus').innerHTML = '⚫ Не подключен';
         }
     }
     
@@ -542,7 +551,7 @@
             return;
         }
         const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        addMessageToChat(text, 'outgoing', time);
+        addMessage(text, 'outgoing', time);
         currentConn.send({ type: 'message', text: text, time: time });
         input.value = '';
     }
@@ -550,44 +559,15 @@
     function sendSticker(emoji) {
         if (!isConnected) { addSystemMessage('⚠️ Сначала подключитесь к другу'); return; }
         const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        addMessageToChat(emoji, 'outgoing', time, true);
+        addMessage(emoji, 'outgoing', time, true);
         currentConn.send({ type: 'sticker', sticker: emoji, time: time });
     }
     
     function sendGift() {
         if (!isConnected) { addSystemMessage('⚠️ Сначала подключитесь к другу'); return; }
         const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        addMessageToChat('🎁 Отправил(а) подарок!', 'outgoing', time);
+        addMessage('🎁 Отправил(а) подарок! 🎁', 'outgoing', time);
         currentConn.send({ type: 'gift', time: time });
-    }
-    
-    function addMessageToChat(content, type, time, isSticker = false) {
-        const container = document.getElementById('messagesArea');
-        
-        if (container.children.length === 1 && container.children[0].innerText.includes('Скопируйте свой ID')) {
-            container.innerHTML = '';
-        }
-        
-        const msgDiv = document.createElement('div');
-        msgDiv.className = `message ${type === 'outgoing' ? 'outgoing' : 'incoming'}`;
-        let displayContent = isSticker && content.length <= 4 ? `<div style="font-size: 42px;">${content}</div>` : escapeHtml(content);
-        msgDiv.innerHTML = `<div><div class="bubble">${displayContent}</div><div class="message-time">${time}</div></div>`;
-        container.appendChild(msgDiv);
-        container.scrollTop = container.scrollHeight;
-    }
-    
-    function addSystemMessage(text) {
-        const container = document.getElementById('messagesArea');
-        
-        if (container.children.length === 1 && container.children[0].innerText.includes('Скопируйте свой ID')) {
-            container.innerHTML = '';
-        }
-        
-        const msgDiv = document.createElement('div');
-        msgDiv.className = 'call-message';
-        msgDiv.innerHTML = `<i class="fas fa-info-circle"></i> ${escapeHtml(text)}`;
-        container.appendChild(msgDiv);
-        container.scrollTop = container.scrollHeight;
     }
     
     function disconnectChat() {
@@ -599,11 +579,6 @@
         document.getElementById('connectionStatus').className = 'status disconnected';
         document.getElementById('connectionStatus').innerHTML = '⚫ Не подключен';
         document.getElementById('connectedUserName').innerHTML = 'Никто не подключен';
-    }
-    
-    function escapeHtml(str) {
-        if (!str) return '';
-        return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
     }
     
     // Обработчики
@@ -627,9 +602,15 @@
     
     // Запуск
     initPeer();
-    addSystemMessage('🌟 Добро пожаловать! Ваш ID сгенерирован автоматически.');
-    addSystemMessage('📋 Скопируйте ID и отправьте другу для общения.');
-    addSystemMessage('📞 После подключения нажмите на иконку телефона для звонка!');
+    
+    // Закрываем панель стикеров при клике вне её
+    document.addEventListener('click', (e) => {
+        const panel = document.getElementById('stickerPanel');
+        const btn = document.getElementById('stickerBtn');
+        if (!panel.contains(e.target) && e.target !== btn && !btn.contains(e.target)) {
+            panel.classList.add('hidden');
+        }
+    });
 </script>
 </body>
 </html>
