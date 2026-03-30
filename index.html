@@ -2,13 +2,13 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SimpleChat — Рабочий мессенджер</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>VoiceChat — Мессенджер с голосовыми звонками</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
             background: #0e1621;
             height: 100vh;
             display: flex;
@@ -18,21 +18,22 @@
         .container {
             background: #17212b;
             border-radius: 28px;
-            width: 1000px;
+            width: 1100px;
             max-width: 95vw;
-            height: 85vh;
+            height: 90vh;
             display: flex;
             overflow: hidden;
             box-shadow: 0 20px 40px rgba(0,0,0,0.4);
         }
         .sidebar {
-            width: 280px;
+            width: 300px;
             background: #1f2c38;
             border-right: 1px solid #2b3b47;
             padding: 20px;
             display: flex;
             flex-direction: column;
             gap: 20px;
+            overflow-y: auto;
         }
         .logo {
             color: white;
@@ -51,19 +52,30 @@
             text-align: center;
             border: 1px solid #2b3b47;
         }
-        .user-name {
-            font-size: 18px;
-            font-weight: 600;
-            color: white;
-            margin-top: 8px;
-        }
-        .online-dot {
-            width: 10px;
-            height: 10px;
-            background: #2c7be5;
+        .avatar {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #2c7be5, #1e5bc0);
             border-radius: 50%;
-            display: inline-block;
-            margin-right: 6px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+        }
+        .user-name { font-size: 18px; font-weight: 600; color: white; margin-top: 10px; }
+        .online-dot { width: 8px; height: 8px; background: #2c7be5; border-radius: 50%; display: inline-block; margin-right: 6px; }
+        .id-box {
+            background: #0e1621;
+            border-radius: 12px;
+            padding: 12px;
+            margin-top: 8px;
+            font-family: monospace;
+            font-size: 12px;
+            color: #2c7be5;
+            word-break: break-all;
+            text-align: center;
         }
         .input-field {
             background: #0e1621;
@@ -85,9 +97,8 @@
             cursor: pointer;
             width: 100%;
         }
-        .btn-secondary {
-            background: #2b3b47;
-        }
+        .btn-secondary { background: #2b3b47; }
+        .btn-danger { background: #e53935; }
         .status {
             padding: 10px;
             border-radius: 12px;
@@ -97,6 +108,8 @@
         }
         .status.connected { background: #1e5b3c; color: #8bcb9e; }
         .status.disconnected { background: #5b2e2e; color: #ff9e9e; }
+        .status.calling { background: #5b4a2e; color: #ffd966; animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
         .chat-area { flex: 1; display: flex; flex-direction: column; }
         .chat-header {
             padding: 16px 20px;
@@ -106,7 +119,21 @@
             justify-content: space-between;
             align-items: center;
         }
-        .chat-header h3 { color: white; }
+        .chat-header h3 { color: white; font-size: 18px; }
+        .call-buttons { display: flex; gap: 12px; }
+        .call-btn {
+            background: none;
+            border: none;
+            font-size: 22px;
+            color: #6c8695;
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+        .call-btn:hover { color: white; background: #2b3b47; }
+        .call-btn.active { background: #e53935; color: white; animation: pulseCall 1s infinite; }
+        @keyframes pulseCall { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
         .messages-area {
             flex: 1;
             overflow-y: auto;
@@ -123,18 +150,29 @@
         .message.outgoing { align-self: flex-end; }
         .message.incoming { align-self: flex-start; }
         .bubble {
-            padding: 8px 12px;
+            padding: 8px 14px;
             border-radius: 18px;
             font-size: 14px;
+            line-height: 1.4;
         }
         .outgoing .bubble { background: #2c7be5; color: white; border-bottom-right-radius: 4px; }
         .incoming .bubble { background: #2b3b47; color: white; border-bottom-left-radius: 4px; }
         .message-time { font-size: 10px; color: #8e9eae; margin-top: 4px; text-align: right; }
+        .call-message {
+            text-align: center;
+            padding: 8px;
+            margin: 5px 0;
+            background: #2b3b47;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #8e9eae;
+        }
         .input-area {
             padding: 16px 20px;
             border-top: 1px solid #2b3b47;
             display: flex;
             gap: 10px;
+            position: relative;
         }
         .message-input {
             flex: 1;
@@ -143,16 +181,33 @@
             border-radius: 24px;
             padding: 12px 18px;
             color: white;
+            font-size: 15px;
             outline: none;
         }
         .send-btn {
             background: #2c7be5;
             border: none;
-            width: 44px;
-            height: 44px;
+            width: 46px;
+            height: 46px;
             border-radius: 50%;
             color: white;
             cursor: pointer;
+            transition: 0.2s;
+        }
+        .tools {
+            position: absolute;
+            bottom: 85px;
+            right: 25px;
+            display: flex;
+            gap: 12px;
+        }
+        .tools button {
+            background: none;
+            border: none;
+            color: #6c8695;
+            font-size: 22px;
+            cursor: pointer;
+            padding: 6px;
         }
         .sticker-panel {
             background: #17212b;
@@ -161,206 +216,322 @@
             display: flex;
             flex-wrap: wrap;
             gap: 10px;
-            margin-bottom: 12px;
             position: absolute;
-            bottom: 80px;
-            right: 20px;
-            width: 250px;
+            bottom: 130px;
+            right: 25px;
+            width: 260px;
+            border: 1px solid #2b3b47;
         }
-        .sticker { font-size: 32px; cursor: pointer; }
-        .tools { position: absolute; bottom: 90px; right: 80px; }
-        .tools button { background: none; border: none; color: #6c8695; font-size: 20px; cursor: pointer; margin-left: 12px; }
+        .sticker { font-size: 36px; cursor: pointer; transition: transform 0.1s; padding: 4px; }
+        .sticker:hover { transform: scale(1.2); background: #2b3b47; border-radius: 12px; }
         .hidden { display: none; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-        .help-text { font-size: 12px; color: #8e9eae; margin-top: 12px; text-align: center; }
-        .my-id-display {
-            background: #0e1621;
-            padding: 10px;
-            border-radius: 10px;
-            font-family: monospace;
+        .help-text { font-size: 12px; color: #8e9eae; margin-top: 12px; text-align: center; line-height: 1.5; }
+        .in-call-badge {
+            background: #e53935;
+            padding: 4px 12px;
+            border-radius: 20px;
             font-size: 12px;
-            color: #2c7be5;
-            word-break: break-all;
-            margin-top: 8px;
+            color: white;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
         }
     </style>
 </head>
 <body>
 <div class="container">
     <div class="sidebar">
-        <div class="logo"><i class="fab fa-telegram"></i> SimpleChat</div>
+        <div class="logo"><i class="fab fa-telegram"></i> VoiceChat</div>
         
         <div class="user-card">
-            <div style="width: 60px; height: 60px; background: linear-gradient(135deg,#2c7be5,#1e5bc0); border-radius: 50%; margin: 0 auto; display: flex; align-items: center; justify-content: center; font-size: 24px; color: white;">
-                <i class="fas fa-user"></i>
-            </div>
+            <div class="avatar"><i class="fas fa-user"></i></div>
             <div class="user-name" id="currentUserName">...</div>
-            <div style="font-size: 12px; color: #8e9eae; margin-top: 5px;"><span class="online-dot"></span> Онлайн</div>
+            <div style="font-size: 12px; color: #8e9eae;"><span class="online-dot"></span> Онлайн</div>
         </div>
         
         <div>
-            <div style="color:#8e9eae; margin-bottom: 8px;"><i class="fas fa-link"></i> ВАШ ID ДЛЯ ДРУГА</div>
-            <div class="my-id-display" id="myIdDisplay">Подключение...</div>
+            <div style="color:#8e9eae; margin-bottom: 8px;"><i class="fas fa-qrcode"></i> ВАШ ID</div>
+            <div class="id-box" id="myIdDisplay">Генерация...</div>
             <button class="btn btn-secondary" id="copyIdBtn" style="margin-top: 8px;"><i class="fas fa-copy"></i> Копировать ID</button>
         </div>
         
         <div>
-            <div style="color:#8e9eae; margin-bottom: 8px;"><i class="fas fa-user-plus"></i> ПОДКЛЮЧИТЬСЯ К ДРУГУ</div>
+            <div style="color:#8e9eae; margin-bottom: 8px;"><i class="fas fa-user-plus"></i> ПОДКЛЮЧИТЬСЯ</div>
             <input type="text" class="input-field" id="remoteIdInput" placeholder="Введите ID друга">
             <button class="btn" id="connectBtn"><i class="fas fa-plug"></i> Подключиться</button>
             <div id="connectionStatus" class="status disconnected">⚫ Не подключен</div>
         </div>
         
         <div class="help-text">
-            <i class="fas fa-info-circle"></i> Инструкция:<br>
-            1️⃣ Вы автоматически получаете ID<br>
-            2️⃣ Скопируйте и отправьте другу<br>
-            3️⃣ Друг вставляет ваш ID → Подключиться<br>
-            4️⃣ Общайтесь! 🎉
+            <i class="fas fa-phone-alt"></i> Голосовые звонки:<br>
+            • Подключитесь к другу<br>
+            • Нажмите 📞 для звонка<br>
+            • Друг принимает вызов<br>
+            • Говорите в микрофон! 🎤
         </div>
     </div>
     
     <div class="chat-area">
         <div class="chat-header">
             <h3><i class="fas fa-comments"></i> <span id="connectedUserName">Никто не подключен</span></h3>
+            <div class="call-buttons">
+                <button class="call-btn" id="voiceCallBtn" title="Голосовой звонок"><i class="fas fa-phone-alt"></i></button>
+            </div>
         </div>
         <div class="messages-area" id="messagesArea">
-            <div style="text-align:center; color:#6c8695; padding:20px;">
-                <i class="fas fa-comment-dots"></i> Скопируйте свой ID и отправьте другу, чтобы начать общение
+            <div style="text-align:center; color:#6c8695; padding:40px;">
+                <i class="fas fa-comment-dots" style="font-size: 48px; opacity: 0.5;"></i><br>
+                Скопируйте свой ID и отправьте другу
             </div>
         </div>
         <div class="input-area">
             <input type="text" class="message-input" id="messageInput" placeholder="Сообщение...">
             <button class="send-btn" id="sendBtn"><i class="fas fa-paper-plane"></i></button>
-        </div>
-        <div class="tools">
-            <button id="stickerBtn"><i class="fas fa-smile"></i></button>
-            <button id="giftBtn"><i class="fas fa-gift"></i></button>
-        </div>
-        <div id="stickerPanel" class="sticker-panel hidden">
-            <div class="sticker">😀</div><div class="sticker">😂</div><div class="sticker">🥰</div>
-            <div class="sticker">😎</div><div class="sticker">🔥</div><div class="sticker">🎉</div>
-            <div class="sticker">❤️</div><div class="sticker">💪</div><div class="sticker">🤣</div>
+            <div class="tools">
+                <button id="stickerBtn"><i class="fas fa-smile"></i></button>
+                <button id="giftBtn"><i class="fas fa-gift"></i></button>
+            </div>
+            <div id="stickerPanel" class="sticker-panel hidden">
+                <div class="sticker">😀</div><div class="sticker">😂</div><div class="sticker">🥰</div>
+                <div class="sticker">😎</div><div class="sticker">🔥</div><div class="sticker">🎉</div>
+                <div class="sticker">❤️</div><div class="sticker">💪</div><div class="sticker">🤣</div>
+                <div class="sticker">😍</div><div class="sticker">👍</div><div class="sticker">🎊</div>
+                <div class="sticker">🚀</div><div class="sticker">✨</div><div class="sticker">💎</div>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
-    // ========== РАБОЧИЙ МЕССЕНДЖЕР ЧЕРЕЗ WEBSOCKET ==========
-    let socket = null;
-    let myId = null;
-    let currentRoom = null;
+    // ========== МЕССЕНДЖЕР С ГОЛОСОВЫМИ ЗВОНКАМИ ==========
+    let peer = null;
+    let currentConn = null;
+    let currentCall = null;
+    let localStream = null;
+    let remoteStream = null;
     let isConnected = false;
-    let messagesHistory = [];
+    let remotePeerId = null;
+    let myId = null;
+    let isInCall = false;
     
-    // Генерируем уникальный ID
-    function generateId() {
-        return 'user_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
-    }
+    // Генерация уникального ID
+    myId = 'user_' + Math.random().toString(36).substring(2, 12) + '_' + Date.now().toString(36);
+    document.getElementById('myIdDisplay').innerText = myId;
+    document.getElementById('currentUserName').innerText = myId.substring(0, 12);
     
-    // Подключение к сигнальному серверу (публичный WebSocket сервер)
-    function connectToServer() {
-        // Используем публичный WebSocket сервер для обмена сообщениями
-        // Это демо-сервер, который работает для тестирования
-        socket = new WebSocket('wss://echo.websocket.org');
-        
-        socket.onopen = () => {
-            myId = generateId();
-            document.getElementById('myIdDisplay').innerText = myId;
-            document.getElementById('currentUserName').innerText = myId.substring(0, 12);
-            addSystemMessage('✅ Подключено! Ваш ID готов.');
-            addSystemMessage('📋 Отправьте этот ID другу.');
-        };
-        
-        socket.onmessage = (event) => {
-            try {
-                const data = JSON.parse(event.data);
-                handleMessage(data);
-            } catch(e) {
-                // Если не JSON, игнорируем
+    // Инициализация PeerJS с STUN серверами
+    function initPeer() {
+        peer = new Peer(myId, {
+            config: {
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                    { urls: 'stun:stun2.l.google.com:19302' },
+                    { urls: 'stun:stun3.l.google.com:19302' },
+                    { urls: 'stun:stun4.l.google.com:19302' }
+                ]
             }
-        };
+        });
         
-        socket.onerror = () => {
-            addSystemMessage('⚠️ Ошибка соединения. Пытаемся переподключиться...');
-            setTimeout(connectToServer, 3000);
-        };
+        peer.on('open', (id) => {
+            addSystemMessage('✅ Ваш ID готов! Отправьте его другу.');
+        });
         
-        socket.onclose = () => {
-            addSystemMessage('🔌 Соединение потеряно. Переподключение...');
-            setTimeout(connectToServer, 3000);
-        };
+        peer.on('error', (err) => {
+            console.error(err);
+            if (err.type === 'network') {
+                addSystemMessage('⚠️ Ошибка сети. Попробуйте обновить страницу (F5)');
+            }
+        });
+        
+        peer.on('connection', (conn) => {
+            if (currentConn) { conn.close(); return; }
+            setupConnection(conn);
+            addSystemMessage(`📞 Входящее подключение!`);
+        });
+        
+        peer.on('call', (call) => {
+            if (currentCall) { 
+                call.close(); 
+                return; 
+            }
+            
+            const acceptCall = confirm(`📞 Входящий голосовой звонок! Принять?`);
+            if (acceptCall) {
+                navigator.mediaDevices.getUserMedia({ audio: true })
+                    .then(stream => {
+                        localStream = stream;
+                        call.answer(stream);
+                        setupVoiceCall(call);
+                        addSystemMessage('🎙️ Звонок начат. Говорите!');
+                        updateCallUI(true);
+                    })
+                    .catch(() => {
+                        addSystemMessage('❌ Не удалось получить доступ к микрофону');
+                        call.close();
+                    });
+            } else {
+                call.close();
+                addSystemMessage('📞 Звонок отклонён');
+            }
+        });
     }
     
-    function handleMessage(data) {
-        if (data.type === 'message') {
-            if (data.from === currentRoom || data.to === myId) {
+    function setupConnection(conn) {
+        currentConn = conn;
+        remotePeerId = conn.peer;
+        isConnected = true;
+        
+        document.getElementById('connectionStatus').className = 'status connected';
+        document.getElementById('connectionStatus').innerHTML = '<i class="fas fa-link"></i> Подключен!';
+        document.getElementById('connectedUserName').innerHTML = '<i class="fas fa-user-circle"></i> Собеседник';
+        
+        conn.on('data', (data) => {
+            if (data.type === 'message') {
                 addMessageToChat(data.text, 'incoming', data.time);
-            }
-        } else if (data.type === 'connect_request') {
-            if (data.to === myId) {
-                currentRoom = data.from;
-                isConnected = true;
-                document.getElementById('connectionStatus').className = 'status connected';
-                document.getElementById('connectionStatus').innerHTML = '<i class="fas fa-link"></i> Подключен!';
-                document.getElementById('connectedUserName').innerHTML = '<i class="fas fa-user-circle"></i> Собеседник';
-                addSystemMessage('✅ Собеседник подключился! Можете общаться.');
-                
-                // Отправляем подтверждение
-                sendToServer({ type: 'connect_accept', from: myId, to: data.from });
-            }
-        } else if (data.type === 'connect_accept') {
-            if (data.to === myId) {
-                currentRoom = data.from;
-                isConnected = true;
-                document.getElementById('connectionStatus').className = 'status connected';
-                document.getElementById('connectionStatus').innerHTML = '<i class="fas fa-link"></i> Подключен!';
-                document.getElementById('connectedUserName').innerHTML = '<i class="fas fa-user-circle"></i> Собеседник';
-                addSystemMessage('✅ Подключение установлено! Можете общаться.');
-            }
-        } else if (data.type === 'sticker') {
-            if (data.to === myId || data.from === currentRoom) {
+            } else if (data.type === 'sticker') {
                 addMessageToChat(data.sticker, 'incoming', data.time, true);
+            } else if (data.type === 'gift') {
+                addMessageToChat('🎁 Подарок от друга!', 'incoming', data.time);
+            } else if (data.type === 'call_end') {
+                endCall();
+                addSystemMessage('📞 Собеседник завершил звонок');
             }
-        } else if (data.type === 'gift') {
-            if (data.to === myId || data.from === currentRoom) {
-                addMessageToChat('🎁 Подарок от друга! 🎁', 'incoming', data.time);
-            }
-        }
-    }
-    
-    function sendToServer(data) {
-        if (socket && socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify(data));
-        }
+        });
+        
+        conn.on('close', () => {
+            disconnectChat();
+            addSystemMessage('🔌 Собеседник отключился');
+        });
+        
+        addSystemMessage('✅ Подключение установлено! Можете общаться и звонить.');
     }
     
     function connectToFriend() {
-        const friendId = document.getElementById('remoteIdInput').value.trim();
-        if (!friendId) {
-            alert('Введите ID друга');
-            return;
-        }
+        const targetId = document.getElementById('remoteIdInput').value.trim();
+        if (!targetId) { alert('Введите ID друга'); return; }
+        if (targetId === myId) { alert('Нельзя подключиться к самому себе!'); return; }
+        if (currentConn) currentConn.close();
         
-        if (friendId === myId) {
-            alert('Нельзя подключиться к самому себе!');
-            return;
-        }
+        addSystemMessage(`🔍 Подключение к ${targetId.substring(0, 12)}...`);
+        const conn = peer.connect(targetId);
         
-        addSystemMessage(`🔍 Подключение к ${friendId.substring(0, 12)}...`);
-        
-        sendToServer({
-            type: 'connect_request',
-            from: myId,
-            to: friendId
+        conn.on('open', () => {
+            setupConnection(conn);
         });
         
-        // Таймаут
+        conn.on('error', () => {
+            alert('Не удалось подключиться. Проверьте ID друга и что он онлайн.');
+            addSystemMessage('❌ Ошибка подключения');
+        });
+        
         setTimeout(() => {
             if (!isConnected) {
                 addSystemMessage('⚠️ Не удалось подключиться. Убедитесь, что друг онлайн.');
             }
-        }, 10000);
+        }, 8000);
+    }
+    
+    function makeVoiceCall() {
+        if (!isConnected) {
+            alert('Сначала подключитесь к другу!');
+            return;
+        }
+        
+        if (isInCall) {
+            endCall();
+            return;
+        }
+        
+        addSystemMessage('📞 Звонок... Ожидаем ответа...');
+        document.getElementById('connectionStatus').className = 'status calling';
+        document.getElementById('connectionStatus').innerHTML = '<i class="fas fa-phone-alt"></i> Звоним...';
+        
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(stream => {
+                localStream = stream;
+                const call = peer.call(remotePeerId, stream);
+                setupVoiceCall(call);
+                updateCallUI(true);
+            })
+            .catch(() => {
+                addSystemMessage('❌ Нет доступа к микрофону. Разрешите доступ в браузере.');
+                document.getElementById('connectionStatus').className = 'status connected';
+                document.getElementById('connectionStatus').innerHTML = '<i class="fas fa-link"></i> Подключен';
+            });
+    }
+    
+    function setupVoiceCall(call) {
+        currentCall = call;
+        isInCall = true;
+        
+        call.on('stream', (stream) => {
+            remoteStream = stream;
+            addSystemMessage('🎙️ Звонок активен! Говорите в микрофон.');
+            document.getElementById('connectionStatus').className = 'status connected';
+            document.getElementById('connectionStatus').innerHTML = '<i class="fas fa-phone-alt"></i> В звонке 🎤';
+            
+            // Создаем аудио элемент для воспроизведения звука собеседника
+            const audioElement = new Audio();
+            audioElement.srcObject = stream;
+            audioElement.autoplay = true;
+            call.audioElement = audioElement;
+        });
+        
+        call.on('close', () => {
+            endCall();
+            addSystemMessage('📞 Звонок завершён');
+        });
+        
+        call.on('error', () => {
+            endCall();
+            addSystemMessage('❌ Ошибка соединения во время звонка');
+        });
+    }
+    
+    function endCall() {
+        if (currentCall) {
+            if (currentCall.audioElement) {
+                currentCall.audioElement.pause();
+                currentCall.audioElement.srcObject = null;
+            }
+            currentCall.close();
+        }
+        if (localStream) {
+            localStream.getTracks().forEach(track => track.stop());
+        }
+        localStream = null;
+        remoteStream = null;
+        currentCall = null;
+        isInCall = false;
+        
+        updateCallUI(false);
+        
+        if (isConnected && currentConn) {
+            currentConn.send({ type: 'call_end' });
+        }
+        
+        if (isConnected) {
+            document.getElementById('connectionStatus').className = 'status connected';
+            document.getElementById('connectionStatus').innerHTML = '<i class="fas fa-link"></i> Подключен';
+        } else {
+            document.getElementById('connectionStatus').className = 'status disconnected';
+            document.getElementById('connectionStatus').innerHTML = '⚫ Не подключен';
+        }
+    }
+    
+    function updateCallUI(inCall) {
+        const callBtn = document.getElementById('voiceCallBtn');
+        if (inCall) {
+            callBtn.classList.add('active');
+            callBtn.innerHTML = '<i class="fas fa-phone-slash"></i>';
+            callBtn.title = 'Завершить звонок';
+        } else {
+            callBtn.classList.remove('active');
+            callBtn.innerHTML = '<i class="fas fa-phone-alt"></i>';
+            callBtn.title = 'Голосовой звонок';
+        }
     }
     
     function sendMessage() {
@@ -370,65 +541,36 @@
             if (!isConnected) addSystemMessage('⚠️ Сначала подключитесь к другу');
             return;
         }
-        
         const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         addMessageToChat(text, 'outgoing', time);
-        
-        sendToServer({
-            type: 'message',
-            from: myId,
-            to: currentRoom,
-            text: text,
-            time: time
-        });
-        
+        currentConn.send({ type: 'message', text: text, time: time });
         input.value = '';
     }
     
     function sendSticker(emoji) {
-        if (!isConnected) {
-            addSystemMessage('⚠️ Сначала подключитесь к другу');
-            return;
-        }
+        if (!isConnected) { addSystemMessage('⚠️ Сначала подключитесь к другу'); return; }
         const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         addMessageToChat(emoji, 'outgoing', time, true);
-        
-        sendToServer({
-            type: 'sticker',
-            from: myId,
-            to: currentRoom,
-            sticker: emoji,
-            time: time
-        });
+        currentConn.send({ type: 'sticker', sticker: emoji, time: time });
     }
     
     function sendGift() {
-        if (!isConnected) {
-            addSystemMessage('⚠️ Сначала подключитесь к другу');
-            return;
-        }
+        if (!isConnected) { addSystemMessage('⚠️ Сначала подключитесь к другу'); return; }
         const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        addMessageToChat('🎁 Отправил(а) подарок! 🎁', 'outgoing', time);
-        
-        sendToServer({
-            type: 'gift',
-            from: myId,
-            to: currentRoom,
-            time: time
-        });
+        addMessageToChat('🎁 Отправил(а) подарок!', 'outgoing', time);
+        currentConn.send({ type: 'gift', time: time });
     }
     
     function addMessageToChat(content, type, time, isSticker = false) {
         const container = document.getElementById('messagesArea');
         
-        // Очищаем приветственное сообщение при первом сообщении
         if (container.children.length === 1 && container.children[0].innerText.includes('Скопируйте свой ID')) {
             container.innerHTML = '';
         }
         
         const msgDiv = document.createElement('div');
         msgDiv.className = `message ${type === 'outgoing' ? 'outgoing' : 'incoming'}`;
-        let displayContent = isSticker && content.length <= 4 ? `<div style="font-size:42px;">${content}</div>` : escapeHtml(content);
+        let displayContent = isSticker && content.length <= 4 ? `<div style="font-size: 42px;">${content}</div>` : escapeHtml(content);
         msgDiv.innerHTML = `<div><div class="bubble">${displayContent}</div><div class="message-time">${time}</div></div>`;
         container.appendChild(msgDiv);
         container.scrollTop = container.scrollHeight;
@@ -442,13 +584,21 @@
         }
         
         const msgDiv = document.createElement('div');
-        msgDiv.style.textAlign = 'center';
-        msgDiv.style.fontSize = '12px';
-        msgDiv.style.color = '#6c8695';
-        msgDiv.style.padding = '6px';
+        msgDiv.className = 'call-message';
         msgDiv.innerHTML = `<i class="fas fa-info-circle"></i> ${escapeHtml(text)}`;
         container.appendChild(msgDiv);
         container.scrollTop = container.scrollHeight;
+    }
+    
+    function disconnectChat() {
+        if (isInCall) endCall();
+        isConnected = false;
+        if (currentConn) currentConn.close();
+        currentConn = null;
+        remotePeerId = null;
+        document.getElementById('connectionStatus').className = 'status disconnected';
+        document.getElementById('connectionStatus').innerHTML = '⚫ Не подключен';
+        document.getElementById('connectedUserName').innerHTML = 'Никто не подключен';
     }
     
     function escapeHtml(str) {
@@ -458,15 +608,13 @@
     
     // Обработчики
     document.getElementById('copyIdBtn').onclick = () => {
-        if (myId) {
-            navigator.clipboard.writeText(myId);
-            alert('✅ ID скопирован! Отправьте его другу.');
-        }
+        navigator.clipboard.writeText(myId);
+        alert('✅ ID скопирован! Отправьте его другу.');
     };
-    
     document.getElementById('connectBtn').onclick = connectToFriend;
     document.getElementById('sendBtn').onclick = sendMessage;
     document.getElementById('messageInput').onkeypress = (e) => { if (e.key === 'Enter') sendMessage(); };
+    document.getElementById('voiceCallBtn').onclick = makeVoiceCall;
     document.getElementById('stickerBtn').onclick = () => document.getElementById('stickerPanel').classList.toggle('hidden');
     document.getElementById('giftBtn').onclick = sendGift;
     
@@ -478,7 +626,10 @@
     });
     
     // Запуск
-    connectToServer();
+    initPeer();
+    addSystemMessage('🌟 Добро пожаловать! Ваш ID сгенерирован автоматически.');
+    addSystemMessage('📋 Скопируйте ID и отправьте другу для общения.');
+    addSystemMessage('📞 После подключения нажмите на иконку телефона для звонка!');
 </script>
 </body>
 </html>
