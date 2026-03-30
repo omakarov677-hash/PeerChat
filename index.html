@@ -24,9 +24,7 @@
         .connection-card { background: #17212b; border-radius: 20px; padding: 20px; border: 1px solid #2b3b47; margin-bottom: 20px; }
         .connection-card h3 { color: white; font-size: 14px; margin-bottom: 12px; }
         .input-group { display: flex; gap: 8px; margin-bottom: 12px; }
-        .input-group i
-
-nput { flex: 1; background: #0e1621; border: 1px solid #2b3b47; border-radius: 12px; padding: 10px 14px; color: white; outline: none; }
+        .input-group input { flex: 1; background: #0e1621; border: 1px solid #2b3b47; border-radius: 12px; padding: 10px 14px; color: white; outline: none; }
         .btn { background: #2c7be5; border: none; border-radius: 12px; padding: 10px 16px; color: white; font-weight: 600; cursor: pointer; }
         .status { padding: 10px; border-radius: 12px; font-size: 13px; text-align: center; margin-top: 10px; }
         .status.connected { background: #1e5b3c; color: #8bcb9e; }
@@ -71,9 +69,7 @@ nput { flex: 1; background: #0e1621; border: 1px solid #2b3b47; border-radius: 1
     <div class="auth-card">
         <h1><i class="fab fa-telegram"></i> PeerChat</h1>
         <p style="color:#8e9eae; margin-bottom:20px;">Мессенджер с авторизацией</p>
-        <input type="text" class="auth-input" id="u
-
-sernameInput" placeholder="Придумайте имя">
+        <input type="text" class="auth-input" id="usernameInput" placeholder="Придумайте имя">
         <button class="auth-btn" id="loginBtn">Войти</button>
         <div id="authError" class="error-msg"></div>
         <p style="color:#6c8695; font-size:12px; margin-top:20px;">Скажите другу ваше имя, чтобы он мог найти вас</p>
@@ -98,14 +94,10 @@ sernameInput" placeholder="Придумайте имя">
         <div class="connection-card">
             <h3><i class="fas fa-info-circle"></i> ИНСТРУКЦИЯ</h3>
             <div style="color:#8e9eae; font-size:12px; line-height:1.6;">
-                <i class="fas fa-arrow-right"></i> Введите имя → Войти
-
-                <i class="fas fa-arrow-right"></i> Скажите другу ваше имя
-
-                <i class="fas fa-arrow-right"></i> Друг вводит ваше имя → Найти
-
-                <i class="fas fa-arrow-right"></i> Общайтесь и звоните!
-
+                <i class="fas fa-arrow-right"></i> Введите имя → Войти<br>
+                <i class="fas fa-arrow-right"></i> Скажите другу ваше имя<br>
+                <i class="fas fa-arrow-right"></i> Друг вводит ваше имя → Найти<br>
+                <i class="fas fa-arrow-right"></i> Общайтесь и звоните!<br>
                 <i class="fas fa-exclamation-triangle"></i> Если не подключается — обновите страницу
             </div>
         </div>
@@ -156,9 +148,7 @@ sernameInput" placeholder="Придумайте имя">
         if (saved) usersDatabase = JSON.parse(saved);
         else usersDatabase = {};
     }
-    function saveUsersDB() { localStorage.setItem('peerch
-
-at_users', JSON.stringify(usersDatabase)); }
+    function saveUsersDB() { localStorage.setItem('peerchat_users', JSON.stringify(usersDatabase)); }
 
     function registerUser(username) {
         username = username.toLowerCase().trim();
@@ -238,9 +228,7 @@ at_users', JSON.stringify(usersDatabase)); }
                         .catch(() => {
                             navigator.mediaDevices.getUserMedia({ audio: true })
                                 .then(stream => { localStream = stream; call.answer(stream); setupCall(call); addSystemMessage('🎙️ Только аудио'); })
-                                .catch(() => addSystemMessage('❌ Нет досту
-
-па к микрофону'));
+                                .catch(() => addSystemMessage('❌ Нет доступа к микрофону'));
                         });
                 } else { call.close(); }
             });
@@ -312,9 +300,7 @@ at_users', JSON.stringify(usersDatabase)); }
         const msgDiv = document.createElement('div');
         msgDiv.className = `message ${type === 'outgoing' ? 'outgoing' : 'incoming'}`;
         let displayContent = isSticker && content.length <= 4 ? `<div style="font-size:48px;">${content}</div>` : escapeHtml(content);
-        msgDiv.innerHTML = `<div><div class="bubble">${displayContent}</div><div class="message-time">${time}</div><div class="reaction-bar"><span class="reaction" onclick="addReaction(this, '❤️')">❤️</span><span class="reaction" onclick="addReaction(this, '👍')">👍</span><span class="reaction" onclick="addReaction(this, '😂')">😂</spa
-
-n></div></div>`;
+        msgDiv.innerHTML = `<div><div class="bubble">${displayContent}</div><div class="message-time">${time}</div><div class="reaction-bar"><span class="reaction" onclick="addReaction(this, '❤️')">❤️</span><span class="reaction" onclick="addReaction(this, '👍')">👍</span><span class="reaction" onclick="addReaction(this, '😂')">😂</span></div></div>`;
         container.appendChild(msgDiv);
         container.scrollTop = container.scrollHeight;
     }
@@ -397,9 +383,7 @@ n></div></div>`;
     document.getElementById('loginBtn').onclick = () => {
         const username = document.getElementById('usernameInput').value.trim();
         const result = registerUser(username);
-        if (!result.success) { document.getElementById('authError
-
-').innerText = result.error; return; }
+        if (!result.success) { document.getElementById('authError').innerText = result.error; return; }
         currentUser = result.username;
         loadUsersDB();
         initPeer();
